@@ -57,10 +57,24 @@ predFunExp = convPredictionFun('exp');
 %%
 % optimisedParamsExp=[0.0315    0.6822    0.3582    0.03];
 
-convPredictionExp(optimisedParamsExp,Bfull,Afull);
+% convPredictionExp(optimisedParamsExp,Bfull,Afull);
 [~,predictionsExp,kernelExp] = predFunExp(optimisedParamsExp,Bfull,Afull);
-%%
 plotConvPrediction(predictionsExp,Bfull,Afull);
+
+%% FIT EXPONENTIAL MODEL WITH ADAPTATION
+
+optimisedParamsExpAdapt = [0.0511    6.7144    8.4181    0.044   0.1261 -2];
+predFunExpAdapt = convPredictionFunAdapt('exp');
+%%
+[optimisedParamsExpAdapt,deviationExpAdapt] = fminsearch(predFunExpAdapt,optimisedParamsExpAdapt,[],Bfull,Afull);
+
+%%
+%optimisedParamsExpAdapt=[0.0511    6.7144    8.4181    0.044   0.1261 -2];
+
+% convPredictionExp(optimisedParamsExp,Bfull,Afull);
+[score,predictionsExpAdapt,kernelExpAdapt] = predFunExpAdapt(optimisedParamsExpAdapt,Bfull,Afull);
+
+plotConvPrediction(gcf,predictionsExpAdapt,Bfull,Afull);
 
 %% FIT EXPONENTIAL MODEL TO SUMMED DATA
 
@@ -125,6 +139,7 @@ figure
 for ii = 1:5
     for jj = 1:5
         subplot(5,5,(ii-1)*5+jj);
+        hold on
         plot(1:100,10*squeeze(C(ii,jj,:)),1:100,squeeze(Bfull(ii,jj,:)),1:100,squeeze(predictionsAdapt(ii,jj,:)));
     end
 end
