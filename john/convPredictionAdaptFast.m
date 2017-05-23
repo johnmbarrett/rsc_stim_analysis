@@ -47,8 +47,10 @@ for i=1:5
         preds(isnan(preds))=0;
         preds=preds*paras(4);
         predictions(i,j,:) = preds;
-        deviation=deviation+sqrt(sum((squeeze(Afull(i,j,:))-preds).^2));
+%         deviation=deviation+sqrt(sum((squeeze(Afull(i,j,:))-preds).^2));
+        deviation=deviation+(sum((squeeze(Afull(i,j,:))-preds).^2))/(sum(squeeze(Afull(i,j,:).^2)));
     end
 end
+deviation = deviation/25;
 disp(deviation)
 disp(paras)
