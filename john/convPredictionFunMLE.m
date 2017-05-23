@@ -65,10 +65,10 @@ function fun = convPredictionFunMLE(kernelFun,lower,upper,isPlot)
     
     assert(isa(kernelFun,'function_handle'),'First argument must be a function handle'); % TODO : validate order of params and x as well?
     
-    function [logLikelihood,predictions,kernel] = convPrediction(params,Bfull,Afull)
+    function [negativeLogLikelihood,lambdas,kernel] = convPrediction(params,Bfull,Afull)
         if any(params < lower | params > upper)
-            logLikelihood = Inf;
-            predictions = NaN;
+            negativeLogLikelihood = Inf;
+            lambdas = NaN;
             kernel = NaN;
             return
         end
@@ -78,32 +78,38 @@ function fun = convPredictionFunMLE(kernelFun,lower,upper,isPlot)
         kernel = kernelFun(params,x);
         kernel = kernel/sum(kernel);
 
-        logLikelihood = 0;
+        negativeLogLikelihood = 0;
 
-        predictions = zeros(size(Afull)); % TODO
+        lambdas = zeros(size(Afull,1),size(Afull,3));
 
         % TODO : introduce dim argument so arrays can be arbitrary shape
         for ii = 1:25
-            Bpsth = squeeze(median(sum(Bfull(:,:,ii,:),2),4));
+            Bpsth = squeeze(median(sum(Bfull(:,:,ii,:),2),4)); %*1e3; % Bpsth is in units of total events, so divide by bin width to get it in terms of events per second
             lambda = max(0,conv2(Bpsth,kernel')*params(end-2)-params(end-1))+params(end);
             lambda = lambda(1:100);
-            spikeTerm = log(bsxfun(@times,lambda,Afull(:,:,ii,:)));
+            lambdas(:,ii) = lambda;
+            spikeTerm = log(bsxfun(@times,lambda,Afull(:,:,ii,:))); % Afull remains in units of spikes because we are effectively using it as a logical index, except due to the way Xiaojian analyses the data there can be more than one spike per bin
+            spikeTerm = spikeTerm/50; % mean over trials???? for ortho_aav9 max(Afull(:)) == 46 and there's no way one unit fired that many spikes in a single bin
             spikeTerm(isinf(spikeTerm)) = 0;
-            logLikelihood = logLikelihood - mean(reshape(sum(spikeTerm,1),size(Afull,2)*size(Afull,4),1)) + trapz((1:100)'/1e3,lambda);
+            negativeLogLikelihood = negativeLogLikelihood - mean(reshape(sum(spikeTerm,1),size(Afull,2)*size(Afull,4),1)) + trapz((1:100)'/1e3,lambda);
         end
 
         if isPlot % TODO
             if ~isgraphics(fig) % restore the figure if the user closes it
                 fig = figure;
             end
+            
+            Bfull2 = rot90(reshape(squeeze(median(sum(Bfull,2),4))',5,5,100),2);
+            Afull2 = rot90(reshape(squeeze(median(sum(Afull,2),4))',5,5,100),2);
+            lambdas2 = rot90(reshape(lambdas',5,5,100),2);
 
-            plotConvPrediction(fig,predictions,Bfull,Afull);
+            plotConvPrediction(fig,lambdas2,Bfull2,Afull2);
             drawnow;
         end
 
-        logLikelihood = logLikelihood/25;
+        negativeLogLikelihood = negativeLogLikelihood/25;
 
-        disp(logLikelihood);
+        disp(negativeLogLikelihood);
         disp(params);
     end
     
